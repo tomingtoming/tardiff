@@ -7,7 +7,7 @@ import Codec.Archive.Tar.Entry
 import Text.Printf (printf)
 import qualified Data.ByteString.Lazy as Lbs
 import qualified Data.ByteString.Lazy.Char8 as C8
-import System.Posix.Types (FileMode, CMode(CMode))
+import System.Posix.Types (CMode(CMode))
 import Data.Digest.Pure.SHA
 
 data EntryIdentifier = FileEntry      FilePath Permissions Ownership EpochTime !(Digest SHA1State) Integer
@@ -28,8 +28,8 @@ showEntryIdentifier (FileEntry      path perm owner time sha size   ) = printf "
 showEntryIdentifier (DirectoryEntry path perm owner time            ) = printf "%c%s %s %12s %s"    'd' (showPermissions perm) (showOwnership owner) ([]::String) path
 showEntryIdentifier (SymLinkEntry   path perm owner time target     ) = error $ show [__FILE__, show __LINE__]
 showEntryIdentifier (HardLinkEntry  path perm owner time target     ) = error $ show [__FILE__, show __LINE__]
-showEntryIdentifier (CharDevEntry   path perm owner time min maj    ) = error $ show [__FILE__, show __LINE__]
-showEntryIdentifier (BlockDevEntry  path perm owner time min maj    ) = error $ show [__FILE__, show __LINE__]
+showEntryIdentifier (CharDevEntry   path perm owner time mnr mjr    ) = error $ show [__FILE__, show __LINE__]
+showEntryIdentifier (BlockDevEntry  path perm owner time mnr mjr    ) = error $ show [__FILE__, show __LINE__]
 showEntryIdentifier (NamedPipeEntry path perm owner time            ) = error $ show [__FILE__, show __LINE__]
 showEntryIdentifier (OtherEntry     path perm owner time ch sha size) = printf "%c%s %s %s %4s %s" ch (showPermissions perm) (showOwnership owner) (take 7 $ show sha) (tgmk size) path
 
@@ -43,6 +43,7 @@ showContentType (BlockDevice _ _)      = "b"
 showContentType (NamedPipe)            = "p"
 showContentType (OtherEntryType _ _ _) = "?"
 
+getPath :: EntryIdentifier -> FilePath
 getPath (FileEntry      p _ _ _ _ _  ) = p
 getPath (DirectoryEntry p _ _ _      ) = p
 getPath (SymLinkEntry   p _ _ _ _    ) = p
@@ -62,14 +63,6 @@ identify e@(Entry _ (BlockDevice major minor     ) perm owner time _) = BlockDev
 identify e@(Entry _ (NamedPipe                   ) perm owner time _) = NamedPipeEntry (entryPath e) perm owner time
 identify e@(Entry _ (OtherEntryType ch bytes size) perm owner time _) = OtherEntry     (entryPath e) perm owner time ch (sha1 bytes) (toInteger size)
 
-instance Eq Entry where
-  entry1@(Entry _ content1 perm1 owner1 time1 format1) == entry2@(Entry _ content2 perm2 owner2 time2 format2) =
-    and [entryPath entry1 == entryPath entry2, content1 == content2, perm1 == perm2, owner1 == owner2]
-
-instance Ord Entry where
-  entry1@(Entry _ content1 perm1 owner1 time1 format1) < entry2@(Entry _ content2 perm2 owner2 time2 format2) =
-    entryPath entry1 < entryPath entry2
-
 listEntries :: Tar.Entries Tar.FormatError -> [Tar.Entry]
 listEntries (Tar.Next entry es) = entry : listEntries es
 listEntries (Tar.Done) = []
@@ -88,9 +81,6 @@ rwx '5' = "r-x"
 rwx '6' = "rw-"
 rwx '7' = "rwx"
 rwx  c  = error $ "FileMode Over 7: " ++ [c]
-
-instance Show Ownership where
-  show (Ownership uname gname uid gid) = printf "%s(%d)/%s(%d)" uname uid gname gid
 
 showOwnership :: Ownership -> String
 showOwnership (Ownership uname gname uid gid) = printf "%s(%d)/%s(%d)" uname uid gname gid
