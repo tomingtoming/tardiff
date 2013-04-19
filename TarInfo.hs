@@ -10,28 +10,28 @@ import qualified Data.ByteString.Lazy.Char8 as C8
 import System.Posix.Types (FileMode, CMode(CMode))
 import Data.Digest.Pure.SHA
 
-data EntryIdentifier = FileEntry      FilePath Permissions Ownership EpochTime !(Digest SHA1State) FileSize
+data EntryIdentifier = FileEntry      FilePath Permissions Ownership EpochTime !(Digest SHA1State) Integer
                      | DirectoryEntry FilePath Permissions Ownership EpochTime
                      | SymLinkEntry   FilePath Permissions Ownership EpochTime FilePath
                      | HardLinkEntry  FilePath Permissions Ownership EpochTime FilePath
                      | CharDevEntry   FilePath Permissions Ownership EpochTime Int Int
                      | BlockDevEntry  FilePath Permissions Ownership EpochTime Int Int
                      | NamedPipeEntry FilePath Permissions Ownership EpochTime
-                     | OtherEntry     FilePath Permissions Ownership EpochTime Char !(Digest SHA1State) FileSize
+                     | OtherEntry     FilePath Permissions Ownership EpochTime Char !(Digest SHA1State) Integer
                      deriving (Eq, Ord)
 
 instance Show EntryIdentifier where
   show = showEntryIdentifier
 
 showEntryIdentifier :: EntryIdentifier -> String
-showEntryIdentifier (FileEntry      path perm owner time sha size   ) = concat ['-' : showPermissions perm, ' ' : showOwnership owner, ' ' : take 7 (show sha), ' ' : show size, ' ' : path]
-showEntryIdentifier (DirectoryEntry path perm owner time            ) = concat ['d' : showPermissions perm, ' ' : showOwnership owner, ' ' : "       ", " ", "    ", " ", path]
+showEntryIdentifier (FileEntry      path perm owner time sha size   ) = printf "%c%s %s %s %4s %s" '-' (showPermissions perm) (showOwnership owner) (take 7 $ show sha) (tgmk size) path
+showEntryIdentifier (DirectoryEntry path perm owner time            ) = printf "%c%s %s %12s %s"    'd' (showPermissions perm) (showOwnership owner) ([]::String) path
 showEntryIdentifier (SymLinkEntry   path perm owner time target     ) = error $ show [__FILE__, show __LINE__]
 showEntryIdentifier (HardLinkEntry  path perm owner time target     ) = error $ show [__FILE__, show __LINE__]
 showEntryIdentifier (CharDevEntry   path perm owner time min maj    ) = error $ show [__FILE__, show __LINE__]
 showEntryIdentifier (BlockDevEntry  path perm owner time min maj    ) = error $ show [__FILE__, show __LINE__]
 showEntryIdentifier (NamedPipeEntry path perm owner time            ) = error $ show [__FILE__, show __LINE__]
-showEntryIdentifier (OtherEntry     path perm owner time ch sha size) = concat [ch : showPermissions perm, ' ' : showOwnership owner, ' ' : take 7 (show sha), ' ' : show size, ' ' : path]
+showEntryIdentifier (OtherEntry     path perm owner time ch sha size) = printf "%c%s %s %s %4s %s" ch (showPermissions perm) (showOwnership owner) (take 7 $ show sha) (tgmk size) path
 
 showContentType :: Tar.EntryContent -> Lbs.ByteString
 showContentType (NormalFile _ _)       = "-"
@@ -43,22 +43,6 @@ showContentType (BlockDevice _ _)      = "b"
 showContentType (NamedPipe)            = "p"
 showContentType (OtherEntryType _ _ _) = "?"
 
-{- Useless statement beause of deriving.
-instance Eq EntryIdentifier where
-  (FileEntry      p1 _ _ _ _  ) == (FileEntry      p2 _ _ _ _  ) = undefined
-  (DirectoryEntry p1 _ _ _    ) == (DirectoryEntry p2 _ _ _    ) = undefined
-  (SymLinkEntry   p1 _ _ _ _  ) == (SymLinkEntry   p2 _ _ _ _  ) = undefined
-  (HardLinkEntry  p1 _ _ _ _  ) == (HardLinkEntry  p2 _ _ _ _  ) = undefined
-  (CharDevEntry   p1 _ _ _ _ _) == (CharDevEntry   p2 _ _ _ _ _) = undefined
-  (BlockDevEntry  p1 _ _ _ _ _) == (BlockDevEntry  p2 _ _ _ _ _) = undefined
-  (NamedPipeEntry p1 _ _ _    ) == (NamedPipeEntry p2 _ _ _    ) = undefined
-  (OtherEntry     p1 _ _ _ _ _) == (OtherEntry     p2 _ _ _ _ _) = undefined
-  _                             == _                             = False
-
-instance Ord EntryIdentifier where
-  a < b = getPath a < getPath b
--}
-
 getPath (FileEntry      p _ _ _ _ _  ) = p
 getPath (DirectoryEntry p _ _ _      ) = p
 getPath (SymLinkEntry   p _ _ _ _    ) = p
@@ -69,14 +53,14 @@ getPath (NamedPipeEntry p _ _ _      ) = p
 getPath (OtherEntry     p _ _ _ _ _ _) = p
 
 identify :: Entry -> EntryIdentifier
-identify e@(Entry _ (NormalFile bytes size       ) perm owner time _) = FileEntry      (entryPath e) perm owner time (sha1 bytes) size
+identify e@(Entry _ (NormalFile bytes size       ) perm owner time _) = FileEntry      (entryPath e) perm owner time (sha1 bytes) (toInteger size)
 identify e@(Entry _ (Directory                   ) perm owner time _) = DirectoryEntry (entryPath e) perm owner time
 identify e@(Entry _ (SymbolicLink target         ) perm owner time _) = SymLinkEntry   (entryPath e) perm owner time (fromLinkTarget target)
 identify e@(Entry _ (HardLink target             ) perm owner time _) = HardLinkEntry  (entryPath e) perm owner time (fromLinkTarget target)
 identify e@(Entry _ (CharacterDevice major minor ) perm owner time _) = CharDevEntry   (entryPath e) perm owner time major minor
 identify e@(Entry _ (BlockDevice major minor     ) perm owner time _) = BlockDevEntry  (entryPath e) perm owner time major minor
 identify e@(Entry _ (NamedPipe                   ) perm owner time _) = NamedPipeEntry (entryPath e) perm owner time
-identify e@(Entry _ (OtherEntryType ch bytes size) perm owner time _) = OtherEntry     (entryPath e) perm owner time ch (sha1 bytes) size
+identify e@(Entry _ (OtherEntryType ch bytes size) perm owner time _) = OtherEntry     (entryPath e) perm owner time ch (sha1 bytes) (toInteger size)
 
 instance Eq Entry where
   entry1@(Entry _ content1 perm1 owner1 time1 format1) == entry2@(Entry _ content2 perm2 owner2 time2 format2) =
@@ -116,3 +100,24 @@ showPath = C8.pack . entryPath
 
 showTime :: Tar.Entry -> Lbs.ByteString
 showTime = undefined
+
+tgmk :: Integer -> String
+tgmk n | n <             1000 = show n
+       -- Kilo value with point
+       | n <            10000 = (++ "K") $ take 3 $ show $ (fromInteger n) / 1000
+       -- Kilo value without point
+       | n <          1000000 = (++ "K") $ show $ (fromInteger n) `div` 1000
+       -- Mega value with point
+       | n <         10000000 = (++ "M") $ take 3 $ show $ (fromInteger n) / 1000000
+       -- Mega value without point
+       | n <       1000000000 = (++ "M") $ show $ (fromInteger n) `div` 1000000
+       -- Giga value with point
+       | n <      10000000000 = (++ "G") $ take 3 $ show $ (fromInteger n) / 1000000000
+       -- Giga value without point
+       | n <    1000000000000 = (++ "G") $ show $ (fromInteger n) `div` 1000000000
+       -- Tera value with point
+       | n <   10000000000000 = (++ "T") $ take 3 $ show $ (fromInteger n) / 1000000000000
+       -- Tera value without point
+       | n < 1000000000000000 = (++ "T") $ show $ (fromInteger n) `div` 1000000000000
+       -- More big value
+       | otherwise            = show n
