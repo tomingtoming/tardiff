@@ -1,12 +1,13 @@
 {-# LANGUAGE OverloadedStrings, CPP #-}
 
-module TarInfo where
+module TarInfo (
+  listEntries, identify, EntryIdentifier(..), getPath
+) where
 
 import qualified Codec.Archive.Tar as Tar
 import Codec.Archive.Tar.Entry
 import Text.Printf (printf)
 import qualified Data.ByteString.Lazy as Lbs
-import qualified Data.ByteString.Lazy.Char8 as C8
 import System.Posix.Types (CMode(CMode))
 import Data.Digest.Pure.SHA
 
@@ -65,14 +66,17 @@ getPath (NamedPipeEntry p _ _ _      ) = p
 getPath (OtherEntry     p _ _ _ _ _ _) = p
 
 identify :: Entry -> EntryIdentifier
-identify e@(Entry _ (NormalFile bytes size       ) perm owner time _) = FileEntry      (entryPath e) perm owner time (sha1 bytes) (toInteger size)
-identify e@(Entry _ (Directory                   ) perm owner time _) = DirectoryEntry (entryPath e) perm owner time
-identify e@(Entry _ (SymbolicLink target         ) perm owner time _) = SymLinkEntry   (entryPath e) perm owner time (fromLinkTarget target)
-identify e@(Entry _ (HardLink target             ) perm owner time _) = HardLinkEntry  (entryPath e) perm owner time (fromLinkTarget target)
-identify e@(Entry _ (CharacterDevice major minor ) perm owner time _) = CharDevEntry   (entryPath e) perm owner time major minor
-identify e@(Entry _ (BlockDevice major minor     ) perm owner time _) = BlockDevEntry  (entryPath e) perm owner time major minor
-identify e@(Entry _ (NamedPipe                   ) perm owner time _) = NamedPipeEntry (entryPath e) perm owner time
-identify e@(Entry _ (OtherEntryType ch bytes size) perm owner time _) = OtherEntry     (entryPath e) perm owner time ch (sha1 bytes) (toInteger size)
+identify e@(Entry _ (NormalFile bytes size       ) perm owner time _) = FileEntry      (getPosixPath e) perm owner time (sha1 bytes) (toInteger size)
+identify e@(Entry _ (Directory                   ) perm owner time _) = DirectoryEntry (getPosixPath e) perm owner time
+identify e@(Entry _ (SymbolicLink target         ) perm owner time _) = SymLinkEntry   (getPosixPath e) perm owner time (fromLinkTarget target)
+identify e@(Entry _ (HardLink target             ) perm owner time _) = HardLinkEntry  (getPosixPath e) perm owner time (fromLinkTarget target)
+identify e@(Entry _ (CharacterDevice major minor ) perm owner time _) = CharDevEntry   (getPosixPath e) perm owner time major minor
+identify e@(Entry _ (BlockDevice major minor     ) perm owner time _) = BlockDevEntry  (getPosixPath e) perm owner time major minor
+identify e@(Entry _ (NamedPipe                   ) perm owner time _) = NamedPipeEntry (getPosixPath e) perm owner time
+identify e@(Entry _ (OtherEntryType ch bytes size) perm owner time _) = OtherEntry     (getPosixPath e) perm owner time ch (sha1 bytes) (toInteger size)
+
+getPosixPath :: Entry -> String
+getPosixPath = fromTarPathToPosixPath . entryTarPath
 
 listEntries :: Tar.Entries Tar.FormatError -> [Tar.Entry]
 listEntries (Tar.Next entry es) = entry : listEntries es
@@ -95,9 +99,6 @@ rwx  c  = error $ "FileMode Over 7: " ++ [c]
 
 showOwnership :: Ownership -> String
 showOwnership (Ownership uname gname uid gid) = printf "%s(%d)/%s(%d)" uname uid gname gid
-
-showPath :: Tar.Entry -> Lbs.ByteString
-showPath = C8.pack . entryPath
 
 showTime :: Tar.Entry -> Lbs.ByteString
 showTime = undefined
