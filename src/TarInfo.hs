@@ -18,10 +18,21 @@ data EntryIdentifier = FileEntry      FilePath Permissions Ownership EpochTime !
                      | BlockDevEntry  FilePath Permissions Ownership EpochTime Int Int
                      | NamedPipeEntry FilePath Permissions Ownership EpochTime
                      | OtherEntry     FilePath Permissions Ownership EpochTime Char !(Digest SHA1State) Integer
-                     deriving (Eq, Ord)
+                     deriving Ord
 
 instance Show EntryIdentifier where
   show = showEntryIdentifier
+
+instance Eq EntryIdentifier where
+  (FileEntry      path perm owner _ sha size   ) == (FileEntry      path' perm' owner' _ sha' size'    ) = and [path == path', perm == perm', owner == owner', sha == sha', size == size']
+  (DirectoryEntry path perm owner _            ) == (DirectoryEntry path' perm' owner' _               ) = and [path == path', perm == perm', owner == owner']
+  (SymLinkEntry   path perm owner _ target     ) == (SymLinkEntry   path' perm' owner' _ target'       ) = and [path == path', perm == perm', owner == owner', target == target']
+  (HardLinkEntry  path perm owner _ target     ) == (HardLinkEntry  path' perm' owner' _ target'       ) = and [path == path', perm == perm', owner == owner', target == target']
+  (CharDevEntry   path perm owner _ mnr mjr    ) == (CharDevEntry   path' perm' owner' _ mnr' mjr'     ) = and [path == path', perm == perm', owner == owner', mnr == mnr', mjr == mjr']
+  (BlockDevEntry  path perm owner _ mnr mjr    ) == (BlockDevEntry  path' perm' owner' _ mnr' mjr'     ) = and [path == path', perm == perm', owner == owner', mnr == mnr', mjr == mjr']
+  (NamedPipeEntry path perm owner _            ) == (NamedPipeEntry path' perm' owner' _               ) = and [path == path', perm == perm', owner == owner']
+  (OtherEntry     path perm owner _ ch sha size) == (OtherEntry     path' perm' owner' _ ch' sha' size') = and [path == path', perm == perm', owner == owner', ch == ch', sha == sha', size == size']
+  _                                              == _                                                    = False
 
 showEntryIdentifier :: EntryIdentifier -> String
 showEntryIdentifier (FileEntry      path perm owner time sha size   ) = printf "%c%s %s %s %4s %s" '-' (showPermissions perm) (showOwnership owner) (take 7 $ show sha) (tgmk size) path
@@ -69,14 +80,14 @@ listEntries (Tar.Done) = []
 listEntries (Tar.Fail e) = error $ show e
 
 showPermissions :: Permissions -> String
-showPermissions (CMode n) = concat $ map rwx $ printf "%03o" n
+showPermissions (CMode n) = concat $ map rwx $ printf "%03o" $ mod n 0o1000
 
 rwx :: Char -> String
 rwx '0' = "---"
 rwx '1' = "--x"
 rwx '2' = "-w-"
 rwx '3' = "-wx"
-rwx '4' = "-r-"
+rwx '4' = "r--"
 rwx '5' = "r-x"
 rwx '6' = "rw-"
 rwx '7' = "rwx"
