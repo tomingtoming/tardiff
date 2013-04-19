@@ -1,3 +1,5 @@
+{-# LANGUAGE CPP #-}
+
 import Prelude hiding (catch)
 import Control.Exception
 import System.Environment (getArgs)
@@ -11,11 +13,10 @@ import TarInfo
 main :: IO ()
 main = do
   (bef:aft:_) <- getArgs
-  befTar <- Lbs.readFile bef >>= extract >>= evaluate
-  aftTar <- Lbs.readFile aft >>= extract >>= evaluate
---mapM_ (Lbs.putStrLn . showEntry) befTar
---mapM_ (Lbs.putStrLn . showEntry) aftTar
-  mapM_ (putStrLn . show . fmap (show . showEntry)) $ diff identify befTar aftTar
+  befTar <- Lbs.readFile bef >>= extract >>= evaluate >>= return . fmap identify
+  aftTar <- Lbs.readFile aft >>= extract >>= evaluate >>= return . fmap identify
+  diffData <- evaluate $ diff getPath befTar aftTar :: IO [Diff EntryIdentifier]
+  mapM_ (putStrLn . show) diffData
   return ()
 
 extract :: Lbs.ByteString -> IO [Tar.Entry]
