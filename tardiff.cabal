@@ -2,11 +2,11 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                tardiff
-version:             1.0.1.0
+version:             1.0.2.0
 -- synopsis:            
 -- description:         
 -- license:             
-license-file:        LICENSE
+-- license-file:        LICENSE
 author:              Keisuke Takamiya
 maintainer:          Keisuke_Takamiya@toshibatec.co.jp
 -- copyright:           
@@ -15,7 +15,7 @@ build-type:          Simple
 cabal-version:       >=1.8
 
 executable tardiff
-  ghc-options:         -Wall
+  ghc-options:         -O3 -Wall -fno-warn-type-defaults -threaded -with-rtsopts "-N"
   hs-source-dirs:      src
   main-is:             TarDiff.hs
   -- other-modules:       

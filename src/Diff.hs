@@ -22,7 +22,7 @@ getContent (Del a)   = a
 getContent (Add a)   = a
 getContent (Mod _ a) = a
 
-diff :: (Ord a, Ord i) => (a -> i) -> [a] -> [a] -> [Diff a]
+diff :: (Eq a, Ord i) => (a -> i) -> [a] -> [a] -> [Diff a]
 diff identify xs ys =
   let
     xm = Map.fromList $ zip (map identify xs) xs
