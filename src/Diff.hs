@@ -9,7 +9,7 @@ data Diff a = Del a | Mod a a | Add a --deriving (Show)
 
 instance Show a => Show (Diff a) where
   show (Del a)   = concat ["[Del]", show a]
-  show (Mod a b) = concat ["[Mod]", show a, "\n  -> ", show b]
+  show (Mod a b) = concat ["[Mod]", show a, "\n--->>", show b]
   show (Add a)   = concat ["[Add]", show a]
 
 instance Functor Diff where
