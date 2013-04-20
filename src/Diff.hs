@@ -1,5 +1,5 @@
 module Diff (
-    diff, getContent,
+    diff,
     Diff(Del,Mod,Add)
 ) where
 
@@ -16,11 +16,6 @@ instance Functor Diff where
   fmap f (Del a)   = Del (f a)
   fmap f (Mod a b) = Mod (f a) (f b)
   fmap f (Add a)   = Add (f a)
-
-getContent :: Diff a -> a
-getContent (Del a)   = a
-getContent (Add a)   = a
-getContent (Mod _ a) = a
 
 diff :: (Eq a, Ord i) => (a -> i) -> [a] -> [a] -> [Diff a]
 diff identify xs ys =

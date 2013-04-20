@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                tardiff
-version:             1.0.2.0
+version:             1.0.3.0
 -- synopsis:            
 -- description:         
 -- license:             
@@ -19,4 +19,5 @@ executable tardiff
   hs-source-dirs:      src
   main-is:             TarDiff.hs
   -- other-modules:       
-  build-depends:       base ==4.5.*, tar ==0.4.*, bytestring ==0.9.*, SHA ==1.6.*, zlib ==0.5.*, containers ==0.4.*
+  build-depends:       base ==4.5.*, tar ==0.4.*, bytestring ==0.9.*,
+                       SHA ==1.6.*, zlib ==0.5.*, containers ==0.4.*
