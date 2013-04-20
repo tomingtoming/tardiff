@@ -5,7 +5,7 @@ module Diff (
 
 import qualified Data.Map as Map
 
-data Diff a = Del a | Mod a a | Add a --deriving (Show)
+data Diff a = Del a | Mod a a | Add a
 
 instance Show a => Show (Diff a) where
   show (Del a)   = concat ["[Del]", show a]
