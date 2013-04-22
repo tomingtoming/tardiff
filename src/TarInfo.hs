@@ -39,13 +39,13 @@ instance Eq EntryIdentifier where
   _                                              == _                                                    = False
 
 showEntryIdentifier :: EntryIdentifier -> String
-showEntryIdentifier (FileEntry      path perm owner time sha size   ) = printf "%c%s %s %s %s %4s %s" '-' (showPermissions perm) (showOwnership owner) (showTime time) (take 7 $ show sha) (tgmk size) path
-showEntryIdentifier (DirectoryEntry path perm owner time            ) = printf "%c%s %s %s %12s %s"    'd' (showPermissions perm) (showOwnership owner) (showTime time) ([]::String) path
-showEntryIdentifier (SymLinkEntry   path perm owner time target     ) = error $ show [__FILE__, show __LINE__]
-showEntryIdentifier (HardLinkEntry  path perm owner time target     ) = error $ show [__FILE__, show __LINE__]
-showEntryIdentifier (CharDevEntry   path perm owner time mnr mjr    ) = error $ show [__FILE__, show __LINE__]
-showEntryIdentifier (BlockDevEntry  path perm owner time mnr mjr    ) = error $ show [__FILE__, show __LINE__]
-showEntryIdentifier (NamedPipeEntry path perm owner time            ) = error $ show [__FILE__, show __LINE__]
+showEntryIdentifier (FileEntry      path perm owner time sha size   ) = printf "%c%s %s %s %s %4s %s"     '-' (showPermissions perm) (showOwnership owner) (showTime time) (take 7 $ show sha) (tgmk size) path
+showEntryIdentifier (DirectoryEntry path perm owner time            ) = printf "%c%s %s %s %12s %s"       'd' (showPermissions perm) (showOwnership owner) (showTime time) ([]::String) path
+showEntryIdentifier (SymLinkEntry   path perm owner time target     ) = printf "%c%s %s %s %12s %s -> %s" 'l' (showPermissions perm) (showOwnership owner) (showTime time) ([]::String) path target
+showEntryIdentifier (HardLinkEntry  path perm owner time target     ) = printf "%c%s %s %s %12s %s -> %s" 'l' (showPermissions perm) (showOwnership owner) (showTime time) ([]::String) path target
+showEntryIdentifier (CharDevEntry   path perm owner time mnr mjr    ) = error "キャラクタデバイスはサポートされていません。"
+showEntryIdentifier (BlockDevEntry  path perm owner time mnr mjr    ) = error "キャラクタデバイスはサポートされていません。"
+showEntryIdentifier (NamedPipeEntry path perm owner time            ) = error "名前付きパイプはサポートされていません。"
 showEntryIdentifier (OtherEntry     path perm owner time ch sha size) = printf "%c%s %s %s %s %4s %s" ch (showPermissions perm) (showOwnership owner) (showTime time) (take 7 $ show sha) (tgmk size) path
 
 showContentType :: Tar.EntryContent -> Lbs.ByteString
