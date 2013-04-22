@@ -10,6 +10,9 @@ import Text.Printf (printf)
 import qualified Data.ByteString.Lazy as Lbs
 import System.Posix.Types (CMode(CMode))
 import Data.Digest.Pure.SHA
+import Data.Time
+import System.Locale (defaultTimeLocale)
+
 
 data EntryIdentifier = FileEntry      FilePath Permissions Ownership EpochTime !(Digest SHA1State) Integer
                      | DirectoryEntry FilePath Permissions Ownership EpochTime
@@ -36,14 +39,14 @@ instance Eq EntryIdentifier where
   _                                              == _                                                    = False
 
 showEntryIdentifier :: EntryIdentifier -> String
-showEntryIdentifier (FileEntry      path perm owner time sha size   ) = printf "%c%s %s %s %4s %s" '-' (showPermissions perm) (showOwnership owner) (take 7 $ show sha) (tgmk size) path
-showEntryIdentifier (DirectoryEntry path perm owner time            ) = printf "%c%s %s %12s %s"    'd' (showPermissions perm) (showOwnership owner) ([]::String) path
+showEntryIdentifier (FileEntry      path perm owner time sha size   ) = printf "%c%s %s %s %s %4s %s" '-' (showPermissions perm) (showOwnership owner) (showTime time) (take 7 $ show sha) (tgmk size) path
+showEntryIdentifier (DirectoryEntry path perm owner time            ) = printf "%c%s %s %s %12s %s"    'd' (showPermissions perm) (showOwnership owner) (showTime time) ([]::String) path
 showEntryIdentifier (SymLinkEntry   path perm owner time target     ) = error $ show [__FILE__, show __LINE__]
 showEntryIdentifier (HardLinkEntry  path perm owner time target     ) = error $ show [__FILE__, show __LINE__]
 showEntryIdentifier (CharDevEntry   path perm owner time mnr mjr    ) = error $ show [__FILE__, show __LINE__]
 showEntryIdentifier (BlockDevEntry  path perm owner time mnr mjr    ) = error $ show [__FILE__, show __LINE__]
 showEntryIdentifier (NamedPipeEntry path perm owner time            ) = error $ show [__FILE__, show __LINE__]
-showEntryIdentifier (OtherEntry     path perm owner time ch sha size) = printf "%c%s %s %s %4s %s" ch (showPermissions perm) (showOwnership owner) (take 7 $ show sha) (tgmk size) path
+showEntryIdentifier (OtherEntry     path perm owner time ch sha size) = printf "%c%s %s %s %s %4s %s" ch (showPermissions perm) (showOwnership owner) (showTime time) (take 7 $ show sha) (tgmk size) path
 
 showContentType :: Tar.EntryContent -> Lbs.ByteString
 showContentType (NormalFile _ _)       = "-"
@@ -64,6 +67,16 @@ getPath (CharDevEntry   p _ _ _ _ _  ) = p
 getPath (BlockDevEntry  p _ _ _ _ _  ) = p
 getPath (NamedPipeEntry p _ _ _      ) = p
 getPath (OtherEntry     p _ _ _ _ _ _) = p
+
+getTime :: EntryIdentifier -> EpochTime
+getTime (FileEntry      _ _ _ t _ _  ) = t
+getTime (DirectoryEntry _ _ _ t      ) = t
+getTime (SymLinkEntry   _ _ _ t _    ) = t
+getTime (HardLinkEntry  _ _ _ t _    ) = t
+getTime (CharDevEntry   _ _ _ t _ _  ) = t
+getTime (BlockDevEntry  _ _ _ t _ _  ) = t
+getTime (NamedPipeEntry _ _ _ t      ) = t
+getTime (OtherEntry     _ _ _ t _ _ _) = t
 
 identify :: Entry -> EntryIdentifier
 identify e@(Entry _ (NormalFile bytes size       ) perm owner time _) = FileEntry      (getPosixPath e) perm owner time (sha1 bytes) (toInteger size)
@@ -100,8 +113,10 @@ rwx  c  = error $ "FileMode Over 7: " ++ [c]
 showOwnership :: Ownership -> String
 showOwnership (Ownership uname gname uid gid) = printf "%s(%d)/%s(%d)" uname uid gname gid
 
-showTime :: Tar.Entry -> Lbs.ByteString
-showTime = undefined
+showTime :: EpochTime -> String
+showTime epoch =
+  let time = readTime defaultTimeLocale "%s %Z" $ show epoch ++ " JST" :: ZonedTime
+  in show time
 
 tgmk :: Integer -> String
 tgmk n | n <             1000 = show n
