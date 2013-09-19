@@ -1,6 +1,5 @@
 {-# LANGUAGE CPP #-}
 
-import Prelude hiding (catch)
 import Control.Exception
 import System.Environment (getArgs)
 import qualified Codec.Archive.Tar as Tar
