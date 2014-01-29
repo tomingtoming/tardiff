@@ -15,7 +15,7 @@ build-type:          Simple
 cabal-version:       >=1.8
 
 executable tardiff
-  ghc-options:         -O3 -Wall -fno-warn-type-defaults -threaded -with-rtsopts "-N"
+  ghc-options:         -O3 -Wall -fno-warn-type-defaults -threaded -with-rtsopts "-N" -rtsopts
   hs-source-dirs:      src
   main-is:             TarDiff.hs
   -- other-modules:       
