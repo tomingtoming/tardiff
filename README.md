@@ -10,7 +10,7 @@ go get github.com/tomingtoming/tardiff
 tardiff source.tar destination.tar
 ```
 
-## Available archive types (prefixes)
+## Available archive types (suffixes)
 - `*.tar`
 - `*.tar.gz`
 - `*.tgz`
